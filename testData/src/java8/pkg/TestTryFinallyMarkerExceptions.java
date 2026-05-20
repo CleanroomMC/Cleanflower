@@ -35,7 +35,7 @@ public class TestTryFinallyMarkerExceptions {
       System.out.println("Hello");
     } catch (CatchAllException e) {
       System.out.println("Finally");
-      if(i > 0) {
+      if (i > 0) {
         System.out.println(i);
         return;
       }
@@ -43,12 +43,24 @@ public class TestTryFinallyMarkerExceptions {
     }
     {
       System.out.println("Finally");
-      if(i > 0) {
+      if (i > 0) {
         System.out.println(i);
         return;
       }
     }
 
     System.out.println("Bye");
+  }
+
+
+  public void testNoTryExit(boolean b) {
+    try {
+      while (true) {
+        System.out.println("Hello");
+      }
+    } catch (CatchAllException e) {
+      System.out.println("Finally");
+      throw e;
+    }
   }
 }

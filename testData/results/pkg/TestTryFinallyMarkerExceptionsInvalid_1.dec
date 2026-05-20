@@ -180,7 +180,7 @@ public class TestTryFinallyMarkerExceptionsInvalid {
          }
       }
 
-      System.out.println("Bye 2");// 167
+      System.out.println("Bye 1");// 164
    }// 173
 
    public void testConfusion1(String a, String b) {
@@ -757,14 +757,14 @@ class 'pkg/TestTryFinallyMarkerExceptionsInvalid' {
       35      178
       36      178
       37      178
-      65      182
-      66      182
-      67      182
-      68      182
-      69      182
-      6a      182
-      6b      182
-      6c      182
+      4e      182
+      4f      182
+      50      182
+      51      182
+      52      182
+      53      182
+      54      182
+      55      182
       80      183
    }
 
@@ -1550,7 +1550,7 @@ Lines mapping:
 152 <-> 176
 153 <-> 177
 156 <-> 179
-167 <-> 183
+164 <-> 183
 173 <-> 184
 177 <-> 188
 179 <-> 190
@@ -1687,9 +1687,9 @@ Not mapped:
 161
 162
 163
-164
 165
 166
+167
 169
 170
 178

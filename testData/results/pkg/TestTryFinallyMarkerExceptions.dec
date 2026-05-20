@@ -32,6 +32,16 @@ public class TestTryFinallyMarkerExceptions {
 
       System.out.println("Bye");// 52
    }// 53
+
+   public void testNoTryExit(boolean b) {
+      try {
+         while (true) {
+            System.out.println("Hello");// 59
+         }
+      } finally {
+         System.out.println("Finally");// 62
+      }
+   }
 }
 
 class 'pkg/TestTryFinallyMarkerExceptions' {
@@ -118,6 +128,25 @@ class 'pkg/TestTryFinallyMarkerExceptions' {
       3d      32
       3e      33
    }
+
+   method 'testNoTryExit (Z)V' {
+      0      38
+      1      38
+      2      38
+      3      38
+      4      38
+      5      38
+      6      38
+      7      38
+      c      41
+      d      41
+      e      41
+      f      41
+      10      41
+      11      41
+      12      41
+      13      41
+   }
 }
 
 Lines mapping:
@@ -135,6 +164,8 @@ Lines mapping:
 40 <-> 29
 52 <-> 33
 53 <-> 34
+59 <-> 39
+62 <-> 42
 Not mapped:
 9
 11
@@ -151,3 +182,5 @@ Not mapped:
 46
 47
 48
+61
+63
