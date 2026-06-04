@@ -290,8 +290,17 @@ public class SingleClassesTest extends SingleClassesTestBase {
     register(JAVA_8, "TestInUse");
 
     register(GROOVY, "TestGroovyClass");
+    register(GROOVY, "TestGroovyFinallyBlockVariableUse");
+    register(GROOVY, "TestGroovyFinallyThrow");
+    register(GROOVY, "TestGroovyFinallyVarDef");
     register(GROOVY, "TestGroovyTrait");
     register(GROOVY, "TestGroovyTryCatch");
+    register(GROOVY, "TestGroovyTryCatchFinally");
+    register(GROOVY, "TestGroovyTryFinally");
+    register(GROOVY, "TestGroovyTryLoopReturnFinally");
+    register(GROOVY, "TestGroovyTryLoopSimpleFinally");
+    register(GROOVY, "TestGroovyTryReturn");
+    register(GROOVY, "TestGroovyTrySplit");
     register(JAVA_8, "TestPrivateClasses");
     register(KOTLIN, "TestSuspendLambdaKt");
     register(KOTLIN, "TestRunSuspend");
