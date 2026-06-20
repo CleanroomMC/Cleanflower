@@ -2,7 +2,7 @@ package pkg;
 
 public class TestByteArrayMerge {
    private static byte[] decode(int var0, int var1) {
-      B var2 = null;
+      byte[] var2 = null;
       if (var0 > 0) {
          var2 = new byte[var0];
       } else {
@@ -11,11 +11,11 @@ public class TestByteArrayMerge {
 
       int var3 = var1 & 0xFF;
 
-      for (int var4 = 0; var4 < ((Object[])var2).length; var4++) {
-         ((Object[])var2)[var4] = (byte)var3;
+      for (int var4 = 0; var4 < var2.length; var4++) {
+         var2[var4] = (byte)var3;
       }
 
-      return (byte[])var2;
+      return var2;
    }
 }
 
