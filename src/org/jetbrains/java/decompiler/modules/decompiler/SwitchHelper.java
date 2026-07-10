@@ -685,8 +685,9 @@ public final class SwitchHelper {
             if (list.size() == 1 && list.get(0) == null) { // default by itself
               Statement st = switchSt.getCaseStatements().get(i);
               if (IfPatternMatchProcessor.isStatementMatchThrow(st)) {
-                // Replace it with an empty block
+                // Replace it with an empty block and remove it
                 st.replaceWithEmpty();
+                switchSt.removeCase(i);
               }
             }
           }

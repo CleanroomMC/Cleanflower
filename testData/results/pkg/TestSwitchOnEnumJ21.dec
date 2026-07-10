@@ -91,7 +91,7 @@ public class TestSwitchOnEnumJ21 {
       }
    }// 91
 
-   public void testComplexPattern(TestSwitchOnEnumJ21.A param1) {
+   public void testComplexPattern(TestSwitchOnEnumJ21.A a) {
       // $VF: Couldn't be decompiled
       // Bytecode:
       // 00: aload 1
