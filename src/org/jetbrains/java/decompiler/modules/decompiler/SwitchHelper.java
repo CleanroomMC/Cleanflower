@@ -18,6 +18,7 @@ import org.jetbrains.java.decompiler.struct.gen.FieldDescriptor;
 import org.jetbrains.java.decompiler.struct.gen.TypeFamily;
 import org.jetbrains.java.decompiler.struct.gen.VarType;
 import org.jetbrains.java.decompiler.util.Pair;
+import org.jetbrains.java.decompiler.util.collections.VBStyleCollection;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -217,7 +218,6 @@ public final class SwitchHelper {
    * @return true if simplified successfully, false otherwise
    */
   private static boolean trySimplifyStringSwitch(SwitchStatement switchStat, Exprent switchHeadValue) {
-    // Get the type of switch by matching against each type
     StringSwitch switchInfo = StringSwitch.match(switchStat);
     if (switchInfo == null) {
       return false;
@@ -297,6 +297,13 @@ public final class SwitchHelper {
     return true;
   }
 
+  /**
+   * Unwraps a merged switch's case blocks by reconstructing the cases.
+   * The situation this is required for is when a merged switch
+   *   with `return xyz;` in the case block instead of an intermediate.
+   * @param switchInfo the switch info object
+   * @return true if unwrapped, false otherwise
+   */
   private static boolean unwrapMergedSwitchCases(StringSwitch switchInfo) {
     int processedCasesIdx = 0;
 
@@ -312,8 +319,8 @@ public final class SwitchHelper {
         continue;
       }
 
-      // If the only statement inside the if is a return
-      if (!(exprs.get(0) instanceof ExitExprent exitExpr) || !exitExpr.getExitType().equals(ExitExprent.Type.RETURN)) {
+      // If the only statement inside the if is a return or variable assignment (but not both or neither)
+      if (!isConstReturn(exprs.get(0)) == !isConstAssign(exprs.get(0))) {
         continue;
       }
 
@@ -322,18 +329,15 @@ public final class SwitchHelper {
       // Remove all case data for this case as we create new values/edges/stats later.
       switchInfo.first().removeCase(processedCasesIdx);
 
-      // Remove normal edge between case and default block if it exists
-      if (currIf.hasSuccessor(StatEdge.TYPE_REGULAR)) {
-        currIf.getSuccessorEdges(StatEdge.TYPE_REGULAR).get(0).remove();
-      }
-
       // Process the if and optionally the if-else/else chain if it exists too
       while (currIf != null) {
         IfStatement elseStat = (IfStatement) currIf.getElsestat();
 
-        // Remove break that connects from the if to the block after the switch if it exists
-        if (currIf.hasSuccessor(StatEdge.TYPE_BREAK)) {
-          currIf.getSuccessorEdges(StatEdge.TYPE_BREAK).get(0).remove();
+        // Sometimes there will be a break edge outside of the if stat's block.
+        // It will break out of the if stat, when we want it to break outside of the switch instead.
+        if (currIf.getIfstat().hasSuccessor(StatEdge.TYPE_BREAK)) {
+          StatEdge edge = currIf.getIfstat().getSuccessorEdges(StatEdge.TYPE_BREAK).get(0);
+          edge.changeClosure(switchInfo.first());
         }
 
         // Disconnect any blocks connected to this if basichead (such as if stat, else stat, etc.)
@@ -364,6 +368,10 @@ public final class SwitchHelper {
     return processedCasesIdx > 0;
   }
 
+  /**
+   * Merges duplicate case statements with the same case value into one case statement with multiple case values.
+   * @param switchInfo the switch info
+   */
   private static void mergeDuplicateCaseStats(StringSwitch switchInfo) {
     List<Statement> caseStats = switchInfo.first().getCaseStatements();
     for (int i = 0; i < caseStats.size(); i++) {
@@ -398,7 +406,7 @@ public final class SwitchHelper {
   }
 
   /**
-   * Attempts to find the synthetic stack variable that can exist to be used by string switches.
+   * Finds the synthetic stack variable that can exist to be used by string switches.
    * @param switchInfo the switch info to use
    * @return the result record if found, otherwise null.
    */
@@ -481,6 +489,13 @@ public final class SwitchHelper {
     }
   }
 
+  /**
+   * An example of a synthetic dup var looks like this (merged string-switch):
+   * <pre> {@code
+   * String var3 = str;
+   * switch(var3) {}
+   * } </pre>
+   */
   private record SyntheticDupVarResult(SwitchHeadExprent switchHead, List<Exprent> headExprs, int dupVarIdx,
     VarExprent tmpVar, Exprent realVar) {}
 
@@ -510,14 +525,23 @@ public final class SwitchHelper {
   }
 
   /**
+   * Checks that the given exprent is a const assignment and that the assignment variable is a var exprent.
+   * @param expr exprent to check
+   * @return true if matched otherwise false
+   */
+  private static boolean isConstAssign(Exprent expr) {
+    return expr instanceof AssignmentExprent assignExpr
+      && assignExpr.getRight() instanceof ConstExprent
+      && assignExpr.getLeft() instanceof VarExprent;
+  }
+
+  /**
    * Gets a case map for the given string switch.
-   *
    * @param switchInfo the switch info
    * @return the case map
    */
   private static HashMap<Integer, List<Exprent>> getStringSwitchCaseMap(StringSwitch switchInfo) {
     HashMap<Integer, List<Exprent>> caseMap = new HashMap<>();
-    HashMap<Integer, List<Exprent>> caseRetMap = new HashMap<>();
 
     for (int i = 0; i < switchInfo.first().getCaseStatements().size(); ++i) {
       Statement currStat = switchInfo.first().getCaseStatements().get(i);
@@ -544,14 +568,14 @@ public final class SwitchHelper {
           // Merged switches, however, may contain multiple case labels/strings sharing 1 intermediary.
           // This is commonly found where switches have explicit return values.
           if (ifEqFirstExpr instanceof AssignmentExprent assignExpr) {
-            int intermediate = ((ConstExprent) assignExpr.getRight()).getIntValue();
-            caseMap.computeIfAbsent(intermediate, ArrayList::new).add(realVal);
+            if (assignExpr.getRight() instanceof ConstExprent right) {
+              caseMap.computeIfAbsent(right.getIntValue(), ArrayList::new).add(realVal);
+            }
           } else if (ifEqFirstExpr instanceof ExitExprent) {
             List<Exprent> currCaseVal = switchInfo.first().getCaseValues().get(i);
             for (Exprent val : currCaseVal) {
               int hashCode = ((ConstExprent) val).getIntValue();
               caseMap.computeIfAbsent(hashCode, ArrayList::new).add(realVal);
-              caseRetMap.computeIfAbsent(hashCode, ArrayList::new).add(val);
             }
           }
         }
@@ -569,6 +593,12 @@ public final class SwitchHelper {
     return caseMap;
   }
 
+  /**
+   * Takes in a string-switch case map and gets the desired case values by searching the case if stat's head expr.
+   * @param switchInfo the switch info object
+   * @param caseMap the case map
+   * @return a case map with desired values if found, otherwise an empty map
+   */
   private static List<List<Exprent>> getStringSwitchRealCaseValues(StringSwitch switchInfo,
     HashMap<Integer, List<Exprent>> caseMap) {
     List<List<Exprent>> realCaseValues = new ArrayList<>();
@@ -871,7 +901,7 @@ public final class SwitchHelper {
    * The first is a switch on the hashcode of the string with the case statement
    *   being the actual if equal to string literal check.
    * Hashcode collisions result in an else if chain.
-   * The body of the if block sets the switch variable for the following switch.
+   * The body of the if block sets the intermediate variable to an index for the following switch's cases.
    * <p>
    * The switch statement block has the case statements of the original switch
    *   and may also be inlined directly into the first switch's default block.
@@ -915,22 +945,40 @@ public final class SwitchHelper {
         || !(sw.first().getCaseStatements().get(0) instanceof IfStatement)) {
         return false;
       }
+      Exprent firstHeadExpr = firstHeadValInvoc.getInstance();
 
-      // Get the intermediate variable used in all string-switch types other than merged.
-      VarExprent intermediate = null;
+      // Get the main String variable that is matched against in the switch head.
+      VarExprent switchVar;
+      if (firstHeadExpr instanceof VarExprent varExpr) {
+        switchVar = varExpr;
+      } else if (firstHeadExpr instanceof InvocationExprent invocExpr
+        && invocExpr.getInstance() instanceof VarExprent varExpr) {
+        switchVar = varExpr;
+      } else if (firstHeadExpr instanceof AssignmentExprent assignExpr
+        && assignExpr.getLeft() instanceof VarExprent varExpr) {
+        switchVar = varExpr;
+      } else {
+        return false;
+      }
+
+      // Used in all string-switch types except Merged.
+      // In non-merged types, the intermediate variable is set in the first switch
+      //   and matched against in the target/second switch head.
+      VarExprent intermediateVar = null;
       if (!(sw instanceof Merged)) {
         if (!(((SwitchHeadExprent) sw.target().getHeadexprent()).getValue() instanceof VarExprent varExpr)) {
           return false;
         }
-        intermediate = varExpr;
 
-        if (sw instanceof NullableSplit s && !s.expr().getLeft().equals(intermediate)) {
+        if (sw instanceof NullableSplit s && !s.expr().getLeft().equals(varExpr)) {
           // wrong assignment across `if`
           return false;
         }
+
+        intermediateVar = varExpr;
       }
 
-      // Get the synthetic duplicate variable sometimes used in the switch head exprent or the case if statements
+      // Sometimes used in the switch head exprent or the case if statements.
       SyntheticDupVarResult possibleDupVar = findSyntheticDupVar(sw);
 
       // Validate all the case statements in the switch to make sure it matches the type.
@@ -961,57 +1009,38 @@ public final class SwitchHelper {
             for (Exprent oper : condFunc.getLstOperands()) {
               if (!(oper instanceof InvocationExprent condInvoc)
                 || !condInvoc.getName().equals("equals")
-                || !condInvoc.getInstance().equals(firstHeadValInvoc.getInstance())
+                || !condInvoc.getInstance().equals(switchVar)
                 && (possibleDupVar != null && !condInvoc.getInstance().equals(possibleDupVar.tmpVar()))) {
                 return false;
               }
             }
           } else if (!(ifCond instanceof InvocationExprent condInvoc)
             || !condInvoc.getName().equals("equals")
-            || !condInvoc.getInstance().equals(firstHeadValInvoc.getInstance())
+            || !condInvoc.getInstance().equals(switchVar)
             && (possibleDupVar != null && !condInvoc.getInstance().equals(possibleDupVar.tmpVar()))) {
-            // The if statement not containing an equals on the switch head exprent/duplicate stack var
+            // The if statement not containing an equals on the switch head var/duplicate stack var
             // with the case string means that this is not a string-switch.
             return false;
           }
 
-          // TODO: If break checks might not be needed here anymore?
-          boolean isIfBreak = ifStat.getIfstat() == null
-            && ifStat.getElsestat() == null
-            && ifStat.getIfEdge() != null
-            && ifStat.getElseEdge() == null
-            && ifStat.getBasichead().hasSuccessor(StatEdge.TYPE_REGULAR)
-            && ifStat.getBasichead().getSuccessorEdges(StatEdge.TYPE_BREAK).size() == 1;
+          // Non if-break switches only have 1 statement inside the if (an assignment or return)
+          List<Exprent> caseIfBlocks = ifStat.getIfstat() != null ? ifStat.getIfstat().getExprents() : null;
+          if (caseIfBlocks == null || caseIfBlocks.size() != 1) {
+            return false;
+          }
+          Exprent block = caseIfBlocks.get(0);
 
-          if (!isIfBreak) {
-            // Non if-break switches only have 1 statement inside the if (an assignment or return)
-            List<Exprent> block = ifStat.getIfstat() != null ? ifStat.getIfstat().getExprents() : null;
-            if (block == null || block.size() != 1) {
-              return false;
-            }
-
-            // Single/merged string-switch always has a return statement
-            if (sw instanceof Merged && !isConstReturn(block.get(0))) {
-              return false;
-            }
-
-            // Split string-switch always has a variable assignment statement
-            if (!(sw instanceof Merged) && !(isConstAssignWithVar(block.get(0), intermediate))) {
-              return false;
-            }
-          } else {
-            // If the break isn't pointing to the default block
-            if (sw.first().getDefaultCase().isPresent()) {
-              StatEdge defaultBreak = sw.first().getDefaultCase().get().getAllSuccessorEdges().get(0);
-              if (ifStat.getIfEdge().getType() != StatEdge.TYPE_BREAK
-                || !ifStat.getIfEdge().getDestination().equals(defaultBreak.getDestination())) {
-                return false;
-              }
-            }
+          // If there is an intermediate var found but it's not being used how we expect.
+          if (intermediateVar != null && !isConstAssignWithVar(block, intermediateVar)) {
+            return false;
           }
 
-          // All of our desired checks have passed, we know for sure that it's a valid string-switch. Yippee!
-          // Validate the else blocks if they exist as well because multiple hash collision use if-else chains.
+          // Merged switches not using either a const return or const assign in the case block (not both as well!!)
+          if (sw instanceof Merged && isConstReturn(block) == isConstAssign(block)) {
+            return false;
+          }
+
+          // Check the else blocks if they exist as well because multiple hash collision use if-else chains.
           currStat = ifStat.getElsestat();
         }
       }
@@ -1027,8 +1056,23 @@ public final class SwitchHelper {
   record Split(SwitchStatement first, SwitchStatement target) implements StringSwitch {
     private static @Nullable StringSwitch match(SwitchStatement stat) {
       List<StatEdge> edges = stat.getSuccessorEdges(StatEdge.TYPE_REGULAR);
-      if (edges.size() != 1 || !(edges.get(0).getDestination() instanceof SwitchStatement found)) {
+      if (edges.size() != 1) {
         return null;
+      }
+
+      // If the second switch is buried in sequences, we need to go and find it!
+      Statement curr = edges.get(0).getDestination();
+      while (!(curr instanceof SwitchStatement found)) {
+        if (!(curr instanceof SequenceStatement)) {
+          return null;
+        }
+
+        VBStyleCollection<Statement, Integer> stats = curr.getStats();
+        if (stats.isEmpty()) {
+          return null;
+        }
+
+        curr = stats.get(0);
       }
 
       Split matched = new Split(stat, found);
