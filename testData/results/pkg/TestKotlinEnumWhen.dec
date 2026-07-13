@@ -25,7 +25,7 @@ import org.jetbrains.annotations.NotNull;
          "testAnotherEnum",
          "testConsecutive",
          "testConsecutiveMixed",
-         "vineflower_testDataKotlin"
+         "cleanflower_testDataKotlin"
    }
 )
 public enum TestKotlinEnumWhen {

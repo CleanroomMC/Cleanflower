@@ -5,7 +5,7 @@ import org.jetbrains.java.decompiler.api.java.JavaPassRegistrar;
 import org.jetbrains.java.decompiler.main.extern.IVariableNamingFactory;
 
 /**
- * Plugins allow users to interface with Vineflower's decompilation process by providing user-defined passes or language specifications.
+ * Plugins allow users to interface with Cleanflower's decompilation process by providing user-defined passes or language specifications.
  */
 public interface Plugin {
 

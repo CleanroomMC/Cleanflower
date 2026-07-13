@@ -95,7 +95,7 @@ public class TestAnonymousEverything {
                "accept",
                "t",
                "(Lkotlin/Unit;)V",
-               "vineflower-kotlin_testDataKotlin"
+               "cleanflower-kotlin_testDataKotlin"
          }
       )
       final class NamelessClass_1 implements Runnable, Consumer<Unit> {

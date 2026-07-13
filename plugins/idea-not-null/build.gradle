@@ -1,4 +1,4 @@
-base.archivesName = 'vineflower-idea-not-null'
+base.archivesName = 'cleanflower-idea-not-null'
 
 dependencies {
   implementation project(":")

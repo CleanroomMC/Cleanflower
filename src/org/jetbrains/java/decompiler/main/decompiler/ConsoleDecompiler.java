@@ -76,9 +76,9 @@ public class ConsoleDecompiler implements /* IBytecodeProvider, */ IResultSaver,
 
     if (args.length < 1) {
       System.out.println(
-        "=== Vineflower Decompiler " + version() + " ===\n\n" +
-        "Usage: java -jar vineflower.jar --<option>=<value>... <source>... <destination>\n" +
-        "Example: java -jar vineflower.jar --decompile-generics ./MyJar.jar ./out_files\n\n" +
+        "=== Cleanflower Decompiler " + version() + " ===\n\n" +
+        "Usage: java -jar cleanflower.jar --<option>=<value>... <source>... <destination>\n" +
+        "Example: java -jar cleanflower.jar --decompile-generics ./MyJar.jar ./out_files\n\n" +
         "Use -h or --help for more information.");
       return;
     }

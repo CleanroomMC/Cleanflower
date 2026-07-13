@@ -24,7 +24,7 @@ import org.jetbrains.annotations.NotNull;
          "getSl1",
          "()Lkotlin/jvm/functions/Function1;",
          "Lkotlin/jvm/functions/Function1;",
-         "vineflower_testDataKotlin"
+         "cleanflower_testDataKotlin"
    }
 )
 public final class TestSuspendLambdaKt {

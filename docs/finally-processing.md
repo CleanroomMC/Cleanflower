@@ -51,7 +51,7 @@ try{
   }
 ```
 
-This simplification is used in Vineflower. A "try-catch-finally" is actually a "try-catch" inside the `try` block of
+This simplification is used in Cleanflower. A "try-catch-finally" is actually a "try-catch" inside the `try` block of
 a "try-finally". When the statement tree is converted into java code, the "try-finally" will see that it's `try` block
 is just a "try-catch" and will not write its own `try` block, but will instead just append its `finally` block to the
 "try-catch".
@@ -110,7 +110,7 @@ don't allow it.
 
 ## How are `finally`s compiled
 
-(This section assumes the Vineflower simplification listed above)
+(This section assumes the Cleanflower simplification listed above)
 
 In the initial Java 1 implementations, `finally` blocks were compiled using the `jsr` and `ret` opcodes. This allowed
 for the creation of mini-functions (subroutines) inside the larger function. At each point in the `try` block, right
@@ -125,7 +125,7 @@ it made validating and optimizing the bytecode non-trivial. As a result, startin
 with classfile version 51.0 and above (Java 7), `jsr` and `ret` were no longer used and instead, each exit point and
 the catch-all will jump to their own copied version of the `finally` block code.
 
-Handling `jsr` and `ret` instructions isn't only annoying for the Java Runtime, it's also annoying for Vineflower.
+Handling `jsr` and `ret` instructions isn't only annoying for the Java Runtime, it's also annoying for Cleanflower.
 As a result, one of the very first processing steps on the parsed Control Flow Graph is the inlining of jsr
 instructions. This means that we convert old Java 5 and before `finally`s into the version that we'd expect for Java 6+.
 Given that in a later step we will need to deduplicate these, this might seem like a weird action to take but abusing

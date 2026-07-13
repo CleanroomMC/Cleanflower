@@ -1,6 +1,6 @@
 import org.vineflower.build.TestDataRuntimesProvider
 
-base.archivesName = 'vineflower-variable-renaming'
+base.archivesName = 'cleanflower-variable-renaming'
 
 dependencies {
   implementation project(":")

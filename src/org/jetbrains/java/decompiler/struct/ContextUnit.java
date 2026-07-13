@@ -243,7 +243,7 @@ public class ContextUnit {
   private static ForkJoinPool.ForkJoinWorkerThreadFactory namingScheme() {
     return pool -> {
       ForkJoinWorkerThread thread = new ForkJoinWorkerThread(pool) {};
-      thread.setName("Vineflower-DecompilerThread-" + THREAD_ID.getAndIncrement());
+      thread.setName("Cleanflower-DecompilerThread-" + THREAD_ID.getAndIncrement());
 
       return thread;
     };

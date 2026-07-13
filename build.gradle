@@ -22,7 +22,7 @@ allprojects {
   apply plugin: 'com.gradleup.shadow'
   apply plugin: 'java'
 
-  group = 'org.vineflower'
+  group = 'com.cleanroommc'
 
   compileJava {
     sourceCompatibility = '17'
@@ -53,10 +53,10 @@ allprojects {
   }
 }
 
-group = 'org.vineflower'
-base.archivesName = 'vineflower'
+group = 'com.cleanroommc'
+base.archivesName = 'cleanflower'
 
-version = '1.13.0'
+version = '1.0.0'
 
 def ENV = System.getenv()
 version = version + (ENV.GITHUB_ACTIONS ? "" : "+local")
@@ -198,7 +198,7 @@ jar {
   manifest {
     attributes (
       'Main-Class': 'org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler',
-      'Implementation-Name': "Vineflower",
+      'Implementation-Name': "Cleanflower",
       'Implementation-Version': project.version,
       'Automatic-Module-Name': "org.jetbrains.java.decompiler"
     )
@@ -238,7 +238,7 @@ def allJar = tasks.register('allJar', Jar) {allJar ->
   manifest {
     attributes (
       'Main-Class': 'org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler',
-      'Implementation-Name': "Vineflower",
+      'Implementation-Name': "Cleanflower",
       'Implementation-Version': project.version,
       'Automatic-Module-Name': "org.jetbrains.java.decompiler"
     )
@@ -269,16 +269,16 @@ publishing {
   publications {
     mavenJava(MavenPublication) {
       pom {
-        name = 'Vineflower'
+        name = 'Cleanflower'
         packaging = 'jar'
         // optionally artifactId can be defined here
-        description = 'Modern Java & JVM language decompiler aiming to be as accurate as possible, with an emphasis on output quality.'
-        url = 'https://vineflower.org'
+        description = 'Modern Java & JVM language decompiler aiming to be as accurate as possible, with an emphasis on output quality. CleanroomMC fork of Vineflower.'
+        url = 'https://github.com/CleanroomMC/Cleanflower'
 
         scm {
-          connection = 'scm:git:https://github.com/Vineflower/vineflower.git'
-          developerConnection = 'scm:git:ssh:git@github.com:Vineflower/vineflower.git'
-          url = 'https://github.com/Vineflower/vineflower'
+          connection = 'scm:git:https://github.com/CleanroomMC/Cleanflower.git'
+          developerConnection = 'scm:git:ssh:git@github.com:CleanroomMC/Cleanflower.git'
+          url = 'https://github.com/CleanroomMC/Cleanflower'
         }
 
         licenses {
@@ -290,14 +290,13 @@ publishing {
 
         developers {
           developer {
-            id = 'vineflower'
-            name = 'Vineflower Development Team'
-            email = '~jasmine/vineflower-discuss@lists.sr.ht'
+            id = 'cleanroommc'
+            name = 'CleanroomMC'
           }
         }
       }
 
-      // VF-only jar
+      // Slim jar without bundled plugins
       artifact jar
       // Jar with included plugins
       artifact allJar

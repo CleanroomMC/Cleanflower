@@ -2,32 +2,29 @@ name: Build
 on: [push, pull_request]
 jobs:
   build:
-    strategy:
-      matrix:
-        java: [17, 21]
-    runs-on: ubuntu-24.04
-    container:
-      image: eclipse-temurin:${{ matrix.java }}
-      options: --user root
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
       - uses: gradle/actions/setup-gradle@v4
         with:
-          cache-read-only: ${{ github.repository_owner != 'Vineflower' || !(contains(github.ref_name, 'develop') || contains(github.ref_name, 'master')) }}
+          cache-read-only: ${{ github.repository_owner != 'CleanroomMC' || contains(github.ref_name, 'master')) }}
       - name: Build with Gradle
-        run: |
-         ./gradlew build --stacktrace
+        run: ./gradlew build --stacktrace
       - name: Archive test results
         if: "${{ always() }}"
         uses: actions/upload-artifact@v4
         with:
-          name: "test-results-java${{ matrix.java }}"
+          name: test-results
           path: |
             build/reports/
             plugins/*/build/reports/
             build/test-results/**/*.xml
   publish-test-results:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     needs: [build]
     permissions:
       issues: write
