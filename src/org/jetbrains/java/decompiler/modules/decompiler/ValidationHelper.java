@@ -38,21 +38,36 @@ public final class ValidationHelper {
     while (!stack.isEmpty()) {
       Statement stat = stack.pop();
 
-      statements.putWithKey(stat, stat.id);
-
-      stack.addAll(stat.getStats());
+      if (statements.containsKey(stat.id)) {
+        if (statements.getWithKey(stat.id) != stat){
+          throw new IllegalStateException("2 stats with the same id: " + stat + " vs " + statements.getWithKey(stat.id));
+        }
+        // The else case means multiple parent. A later check will produce better error than we could do here.
+      } else {
+        statements.putWithKey(stat, stat.id);
+        stack.addAll(stat.getStats());
+      }
     }
 
     for (Statement stat : statements) {
       for (StatEdge edge : stat.getAllSuccessorEdges()) {
+        if (edge.getSource() != stat) {
+          throw new IllegalStateException("Stat " + stat + " has successor edge for which it isn't the source: " + edge);
+        }
         validateEdgeContext(statements, stat, edge);
       }
 
       for (StatEdge edge : stat.getAllPredecessorEdges()) {
+        if (edge.getDestination() != stat) {
+          throw new IllegalStateException("Stat " + stat + " has predecessor edge for which it isn't the destination: " + edge);
+        }
         validateEdgeContext(statements, stat, edge);
       }
 
       for (StatEdge edge : stat.getLabelEdges()) {
+        if (edge.closure != stat) {
+          throw new IllegalStateException("Stat " + stat + " has a labelled edge for which it isn't the closure: " + edge);
+        }
         validateEdgeContext(statements, stat, edge);
       }
 
@@ -66,9 +81,16 @@ public final class ValidationHelper {
         throw new IllegalStateException("Non-existing first statement: [" + stat + "] " + stat.getFirst());
       }
 
+      if (!stat.getStats().contains(stat.getFirst()) && !(stat instanceof DummyExitStatement) && !(stat instanceof BasicBlockStatement)) {
+        throw new IllegalStateException("Stat doesn't contain first statement: [" + stat + "] " + stat.getFirst());
+      }
+
       for (Statement statStat : stat.getStats()) {
         if (statStat.getParent() != stat) {
-          throw new IllegalStateException("Statement parent is not set correctly: " + statStat);
+          throw new IllegalStateException("Statement parent is not set correctly [" + statStat + "]: Expected " + stat + " but was " + statStat.getParent());
+        }
+        if (!stat.getStats().containsKey(statStat.id)){
+          throw new IllegalStateException("Statement " + stat + " contains non stat without id lookup: " + statStat);
         }
       }
 
@@ -402,7 +424,6 @@ public final class ValidationHelper {
               if (sub instanceof VarExprent) {
                 VarExprent var = (VarExprent) sub;
                 if (!predicate.test(var)) {
-                  System.out.println(root.toJava().convertToStringAndAllowDataDiscard());
                   throw new IllegalStateException(message + ": " + var.getIndex() + "_" + var.getVersion() + " " + var.getVarType());
                 }
               }
@@ -417,12 +438,8 @@ public final class ValidationHelper {
   }
 
   public static void notNull(Object o) {
-    if (!VALIDATE) {
-      return;
-    }
-
     if (o == null) {
-      throw new NullPointerException("Validation: null object");
+      throw new NullPointerException("Null not expected here");
     }
   }
 

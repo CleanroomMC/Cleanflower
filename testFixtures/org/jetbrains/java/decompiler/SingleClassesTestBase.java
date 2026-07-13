@@ -278,14 +278,21 @@ public abstract class SingleClassesTestBase {
           } else {
             // This is terrible! We shouldn't need this! The reason this exists is because Github Actions likes to create
             // different code in impossible to debug ways, so we just allowlist two different versions of the decompiled code.
-            Path tryNext = referenceFile.resolveSibling(referenceFile.getFileName().toString()
-              .replace(".dec", "_1.dec"));
 
-            if (Files.exists(tryNext)) {
-              assertTrue(Files.isRegularFile(tryNext));
-              assertEquals(getContent(tryNext), decompiledContent);
-            } else {
-              throw e;
+            for (int i = 1; ; i++) {
+              Path tryNext = referenceFile.resolveSibling(referenceFile.getFileName().toString()
+                .replace(".dec", "_" + i + ".dec"));
+
+              if (!Files.exists(tryNext)) {
+                throw e;
+              } else {
+                try {
+                  assertTrue(Files.isRegularFile(tryNext));
+                  assertEquals(getContent(tryNext), decompiledContent);
+                  break;
+                } catch (AssertionFailedError ignored) {
+                }
+              }
             }
           }
         }
@@ -307,6 +314,7 @@ public abstract class SingleClassesTestBase {
       JAVA_19_PREVIEW(19, "preview", "Preview"),
       JAVA_21(21),
       JAVA_21_PREVIEW(21, "preview", "Preview"),
+      JAVA_25(25),
       GROOVY("groovy", "Groovy"),
       KOTLIN("kt", "Kotlin", "kt"),
       KOTLIN_OLD("ktold", "Kotlin (old defaults)", "kt"),

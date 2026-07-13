@@ -3,7 +3,6 @@ package org.jetbrains.java.decompiler.code.cfg;
 
 import org.jetbrains.java.decompiler.code.Instruction;
 import org.jetbrains.java.decompiler.code.InstructionSequence;
-import org.jetbrains.java.decompiler.code.SimpleInstructionSequence;
 import org.jetbrains.java.decompiler.main.DecompilerContext;
 import org.jetbrains.java.decompiler.modules.decompiler.decompose.IGraphNode;
 
@@ -24,7 +23,7 @@ public class BasicBlock implements IGraphNode {
   // private fields
   // *****************************************************************************
 
-  private InstructionSequence seq = new SimpleInstructionSequence();
+  private InstructionSequence seq = new InstructionSequence();
 
   private final List<BasicBlock> preds = new ArrayList<>();
   private final List<BasicBlock> succs = new ArrayList<>();
@@ -175,7 +174,7 @@ public class BasicBlock implements IGraphNode {
   }
 
   @Override
-  public Collection<? extends IGraphNode> getPredecessors() {
+  public Collection<? extends BasicBlock> getPredecessors() {
     List<BasicBlock> lst = new ArrayList<>(preds);
     lst.addAll(predExceptions);
     return lst;

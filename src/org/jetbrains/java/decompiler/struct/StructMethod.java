@@ -14,14 +14,16 @@ import org.jetbrains.java.decompiler.struct.gen.MethodDescriptor;
 import org.jetbrains.java.decompiler.struct.gen.generics.GenericMain;
 import org.jetbrains.java.decompiler.struct.gen.generics.GenericMethodDescriptor;
 import org.jetbrains.java.decompiler.util.DataInputFullStream;
-import org.jetbrains.java.decompiler.util.collections.VBStyleCollection;
+import org.jetbrains.java.decompiler.util.Key;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.jetbrains.java.decompiler.code.CodeConstants.*;
+import static org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences.DEBUG_MARKER_EXCEPTIONS;
 
 /*
   method_info {
@@ -40,15 +42,15 @@ public class StructMethod extends StructMember {
 
     String[] values = pool.getClassElement(ConstantPool.METHOD, clQualifiedName, nameIndex, descriptorIndex);
 
-    Map<String, StructGeneralAttribute> attributes = readAttributes(in, pool, own, bytecodeVersion);
-    StructCodeAttribute code = (StructCodeAttribute)attributes.remove(StructGeneralAttribute.ATTRIBUTE_CODE.name);
+    Map<Key<?>, Object> attributes = readAttributes(in, pool, own, bytecodeVersion);
+    StructCodeAttribute code = (StructCodeAttribute)attributes.remove(StructGeneralAttribute.ATTRIBUTE_CODE);
     if (code != null) {
       attributes.putAll(code.codeAttributes);
     }
 
     GenericMethodDescriptor signature = null;
     if (DecompilerContext.getOption(IFernflowerPreferences.DECOMPILE_GENERIC_SIGNATURES)) {
-      StructGenericSignatureAttribute signatureAttr = (StructGenericSignatureAttribute)attributes.get(StructGeneralAttribute.ATTRIBUTE_SIGNATURE.name);
+      StructGenericSignatureAttribute signatureAttr = (StructGenericSignatureAttribute)attributes.get(StructGeneralAttribute.ATTRIBUTE_SIGNATURE);
       if (signatureAttr != null) {
         signature = GenericMain.parseMethodSignature(signatureAttr.getSignature());
       }
@@ -67,14 +69,14 @@ public class StructMethod extends StructMember {
   private final BytecodeVersion bytecodeVersion;
   private final int localVariables;
   private final byte[] codeAndExceptions;
-  private InstructionSequence seq = null;
+  private FullInstructionSequence seq = null;
   private boolean expanded = false;
   private final String classQualifiedName;
   private final GenericMethodDescriptor signature;
   private IVariableNameProvider renamer;
 
   private StructMethod(int accessFlags,
-                       Map<String, StructGeneralAttribute> attributes,
+                       Map<Key<?>, Object> attributes,
                        String name,
                        String descriptor,
                        BytecodeVersion bytecodeVersion,
@@ -111,8 +113,9 @@ public class StructMethod extends StructMember {
   }
 
   @SuppressWarnings("AssignmentToForLoopParameter")
-  private InstructionSequence parseBytecode(DataInputFullStream in, ConstantPool pool) throws IOException {
-    VBStyleCollection<Instruction, Integer> instructions = new VBStyleCollection<>();
+  private FullInstructionSequence parseBytecode(DataInputFullStream in, ConstantPool pool) throws IOException {
+    List<Instruction> instructions = new ArrayList<>();
+    Map<Integer, Integer> offsetToIndex = new HashMap<>();
 
     int length = in.readInt();
     for (int i = 0; i < length; ) {
@@ -319,9 +322,10 @@ public class StructMethod extends StructMember {
 
       i++;
 
-      Instruction instr = Instruction.create(opcode, wide, group, bytecodeVersion, ops, i - offset);
+      Instruction instr = Instruction.create(opcode, wide, group, bytecodeVersion, ops, offset, i - offset);
 
-      instructions.addWithKey(instr, offset);
+      offsetToIndex.put(offset, instructions.size());
+      instructions.add(instr);
     }
 
     // initialize exception table
@@ -329,34 +333,74 @@ public class StructMethod extends StructMember {
 
     int exception_count = in.readUnsignedShort();
     for (int i = 0; i < exception_count; i++) {
-      ExceptionHandler handler = new ExceptionHandler();
-      handler.from = in.readUnsignedShort();
-      handler.to = in.readUnsignedShort();
-      handler.handler = in.readUnsignedShort();
+      int from = offsetToIndex.get(in.readUnsignedShort());
+      // catch block can go to the end of the method
+      int to = offsetToIndex.getOrDefault(in.readUnsignedShort(), instructions.size());
+      int handler = offsetToIndex.get(in.readUnsignedShort());
 
-      int excclass = in.readUnsignedShort();
-      if (excclass != 0) {
-        handler.exceptionClass = pool.getPrimitiveConstant(excclass).getString();
+      int excClass = in.readUnsignedShort();
+      String exceptionClass;
+      if (excClass == 0) {
+        exceptionClass = null;
+      } else {
+        exceptionClass = pool.getPrimitiveConstant(excClass).getString();
+        if (DecompilerContext.getOption(DEBUG_MARKER_EXCEPTIONS)) {
+          if ("org/vineflower/marker/CatchAllException".equals(exceptionClass)){
+            exceptionClass = null;
+          }
+        }
       }
 
-      lstHandlers.add(handler);
+      lstHandlers.add(new ExceptionHandler(from, to, handler, exceptionClass));
     }
 
-    InstructionSequence seq = new FullInstructionSequence(instructions, new ExceptionTable(lstHandlers));
+    if (DecompilerContext.getOption(DEBUG_MARKER_EXCEPTIONS)) {
+      for (int i = 0; i < lstHandlers.size(); i++) {
+        ExceptionHandler range = lstHandlers.get(i);
 
-    // initialize instructions
-    int i = seq.length() - 1;
-    seq.setPointer(i);
-
-    while (i >= 0) {
-      Instruction instr = seq.getInstr(i--);
-      if (instr.group != GROUP_GENERAL) {
-        instr.initInstruction(seq);
+        if ("org/vineflower/marker/UnCatchException".equals(range.exceptionClass())) {
+          lstHandlers = filterOutRange(lstHandlers, i, range.from(), range.to());
+        }
       }
-      seq.addToPointer(-1);
+    }
+
+    FullInstructionSequence seq = new FullInstructionSequence(
+      instructions,
+      offsetToIndex,
+      new ExceptionTable(lstHandlers));
+
+    for (var instr : seq) {
+      instr.initInstruction(seq);
     }
 
     return seq;
+  }
+
+  private static List<ExceptionHandler> filterOutRange(List<ExceptionHandler> lstHandlers, int startIndex, int from, int to) {
+    // DEBUG ONLY: removes all handlers for a specific range
+    List<ExceptionHandler> newHandlers = new ArrayList<>();
+    for (int i = 0; i < lstHandlers.size(); i++) {
+      ExceptionHandler oldRange = lstHandlers.get(i);
+      if (i == startIndex) {
+        // skip marker exception
+        continue;
+      } else if (i < startIndex) {
+        // copy over inner ranges
+        newHandlers.add(oldRange);
+      } else if (oldRange.to() > from && to > oldRange.from()) {
+        // split/filter wrapping ranges
+        if (oldRange.from() < from) {
+          newHandlers.add(new ExceptionHandler(oldRange.from(), from, oldRange.handler(), oldRange.exceptionClass()));
+        }
+        if (oldRange.to() > to) {
+          newHandlers.add(new ExceptionHandler(to, oldRange.to(), oldRange.handler(), oldRange.exceptionClass()));
+        }
+      } else {
+        // copy over non overlapping ranges
+        newHandlers.add(oldRange);
+      }
+    }
+    return newHandlers;
   }
 
   public String getName() {
@@ -383,7 +427,7 @@ public class StructMethod extends StructMember {
     return localVariables;
   }
 
-  public InstructionSequence getInstructionSequence() {
+  public FullInstructionSequence getInstructionSequence() {
     return seq;
   }
 
@@ -409,7 +453,7 @@ public class StructMethod extends StructMember {
 
   @Override
   public String toString() {
-    return name;
+    return name + " " + descriptor;
   }
 
   public String getClassQualifiedName() {

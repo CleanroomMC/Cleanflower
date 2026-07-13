@@ -137,6 +137,18 @@ public class TestTryReturn {
     }
   }
 
+  public void testParsingFailureSimple() {
+    try {
+      try {
+        System.out.println("inner");
+      } finally {
+        return;
+      }
+    } finally {
+      System.out.println("fin");
+    }
+  }
+
   public void testPostdomFailure() {
     // Load bearing useless string- removing this makes vf emit a parsing error???
     String var1;
@@ -193,5 +205,18 @@ public class TestTryReturn {
       // The finally here causes the issue
       System.out.println(var3);
     }
+  }
+
+  public void returnInCatch() {
+    try {
+      System.out.println("Hi!");
+    } catch (Exception e) {
+      System.out.println("hello");
+      return;
+    } finally {
+      System.out.println("finally");
+    }
+
+    System.out.println("post");
   }
 }

@@ -15,7 +15,7 @@ import java.util.*;
 
 public class SwitchExprent extends Exprent {
   private final SwitchStatement backing;
-  private final VarType type;
+  private VarType type;
   // TODO: is needed?
   private final boolean fallthrough;
   // Whether the switch expression returns a value, for case type coercion
@@ -222,6 +222,10 @@ public class SwitchExprent extends Exprent {
     return false;
   }
 
+  public void setType(VarType type) {
+    this.type = type;
+  }
+
   @Override
   public int getPrecedence() {
     return 1; // Should enclose in case of invocation
@@ -235,6 +239,10 @@ public class SwitchExprent extends Exprent {
   @Override
   public Exprent copy() {
     return new SwitchExprent(this.backing, this.type, this.fallthrough, this.standalone);
+  }
+
+  public SwitchStatement getBacking() {
+    return backing;
   }
 
   @Override

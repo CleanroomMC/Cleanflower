@@ -80,7 +80,6 @@ class 'pkg/TestPatternMatchingFake' {
       16      5
       17      5
       18      8
-      1a      8
       1b      8
       1c      8
       1d      8
@@ -129,7 +128,6 @@ class 'pkg/TestPatternMatchingFake' {
 
    method 'test1B (Ljava/lang/Object;)V' {
       0      20
-      2      20
       3      20
       4      20
       5      20
@@ -176,7 +174,6 @@ class 'pkg/TestPatternMatchingFake' {
       14      27
       15      27
       16      30
-      18      30
       19      30
       1a      30
       1b      30
@@ -201,7 +198,6 @@ class 'pkg/TestPatternMatchingFake' {
 
    method 'testClash (Ljava/lang/Object;)V' {
       0      36
-      2      36
       3      36
       4      36
       5      36
@@ -209,9 +205,6 @@ class 'pkg/TestPatternMatchingFake' {
       7      36
       8      36
       d      36
-      e      37
-      f      37
-      10      37
       11      39
       12      39
       13      40
@@ -222,10 +215,15 @@ class 'pkg/TestPatternMatchingFake' {
       18      40
       19      40
       1d      37
+      1e      37
+      1f      37
       20      37
       21      37
       22      37
       23      37
+      24      37
+      25      37
+      26      37
       27      42
    }
 
