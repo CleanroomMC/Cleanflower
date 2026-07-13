@@ -9,7 +9,6 @@ plugins {
   id 'jacoco'
   id 'com.gradleup.shadow' version '8.3.0'
   id 'org.jetbrains.kotlin.jvm' version '2.0.0'
-  id("io.github.gradle-nexus.publish-plugin") version '2.0.0'
 }
 
 apply plugin: 'jacoco'
@@ -298,31 +297,14 @@ publishing {
       artifact javadocJar
     }
   }
-}
-
-nexusPublishing {
   repositories {
-    sonatype {
-      username = ENV.SONATYPE_USER
-      password = ENV.SONATYPE_PASS
-
-      nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-      snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+    maven {
+      name = 'CleanroomMaven'
+      url = 'https://repo.cleanroommc.com/releases'
+      credentials(PasswordCredentials)
+      authentication {
+        basic(BasicAuthentication)
+      }
     }
-  }
-
-  // nexus is eepy, give her time to respond
-  def timeout = Duration.ofMinutes(6)
-  clientTimeout = timeout
-  connectTimeout = timeout
-}
-
-signing {
-  if (ENV.SIGNING_KEY) {
-    def signingKey = ENV.SIGNING_KEY
-    def signingPassword = ENV.SIGNING_KEY_PASSPHRASE
-
-    useInMemoryPgpKeys(signingKey, signingPassword)
-    sign publishing.publications.mavenJava
   }
 }
