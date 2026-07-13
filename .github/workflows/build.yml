@@ -11,7 +11,7 @@ jobs:
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
         with:
-          cache-read-only: ${{ github.repository_owner != 'CleanroomMC' || contains(github.ref_name, 'master')) }}
+          cache-read-only: ${{ github.repository_owner != 'CleanroomMC' || contains(github.ref_name, 'master') }}
       - name: Build with Gradle
         run: ./gradlew build --stacktrace
       - name: Archive test results
